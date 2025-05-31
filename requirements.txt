@@ -4,4 +4,4 @@ torch
 torchvision
 numpy
 Pillow
-yolov8
+ultralytics
