@@ -6,3 +6,4 @@ numpy
 Pillow
 ultralytics
 scikit-learn
+lap
