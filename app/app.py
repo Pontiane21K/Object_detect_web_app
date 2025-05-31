@@ -376,31 +376,63 @@ def main():
                 st.download_button("Download Table", data=csv, file_name="detection_table.csv")
             st.markdown('</div>', unsafe_allow_html=True)
 
-        with st.container():
-            st.markdown('<div class="metrics-section">', unsafe_allow_html=True)
-            st.markdown('<div class="stSubheader">Evaluation Metrics</div>', unsafe_allow_html=True)
-            if log_data:
-                # Detection Metrics (approximate based on confidence scores)
-                st.write("**Detection Quality (Approximate)**")
-                confidences = [log["confidence"] for log in log_data]
-                total_detections = len(confidences)
-                avg_confidence = np.mean(confidences) if confidences else 0
-                reliable_detections = len([c for c in confidences if c >= 0.5])
-                reliable_percentage = (reliable_detections / total_detections * 100) if total_detections > 0 else 0
-                
-                st.write(f"Total Detections: {total_detections}")
-                st.write(f"Average Confidence Score: {avg_confidence:.2f}")
-                st.write(f"Reliable Detections (Confidence ≥ 0.5): {reliable_detections} ({reliable_percentage:.2f}%)")
-                st.write("Note: True Precision, Recall, and mAP cannot be calculated without ground truth annotations.")
-                
-                # Tracking Metrics
-                st.write("**Tracking Performance**")
-                id_switches = count_id_switches(log_data)
-                st.write(f"ID Switches: {id_switches}")
-                st.write("MOTA (Multiple Object Tracking Accuracy) cannot be calculated: no ground truth available.")
-            else:
-                st.write("No detections available to evaluate.")
-            st.markdown('</div>', unsafe_allow_html=True)
+       with st.container():
+                st.markdown('<div class="section-card">', unsafe_allow_html=True)
+                st.markdown('<div class="stSubheader">Evaluation Metrics</div>', unsafe_allow_html=True)
+                # Debug: Check if log_data is populated
+                if not log_data:
+                    st.markdown(
+                        '<p style="color: #ffffff; background-color: rgba(30, 58, 138, 0.9); padding: 8px; border-radius: 5px;">Debug: log_data is empty. No detections were recorded.</p>',
+                        unsafe_allow_html=True
+                    )
+                else:
+                    st.markdown(
+                        f'<p style="color: #ffffff; background-color: rgba(30, 58, 138, 0.9); padding: 8px; border-radius: 5px;">Debug: log_data contains {len(log_data)} entries.</p>',
+                        unsafe_allow_html=True
+                    )
+                    # Detection Metrics (approximate based on confidence scores)
+                    st.markdown(
+                        '<p style="color: #ffffff; background-color: rgba(30, 58, 138, 0.9); padding: 8px; border-radius: 5px;"><strong>Detection Quality (Approximate)</strong></p>',
+                        unsafe_allow_html=True
+                    )
+                    confidences = [log["confidence"] for log in log_data]
+                    total_detections = len(confidences)
+                    avg_confidence = np.mean(confidences) if confidences else 0
+                    reliable_detections = len([c for c in confidences if c >= 0.5])
+                    reliable_percentage = (reliable_detections / total_detections * 100) if total_detections > 0 else 0
+
+                    st.markdown(
+                        f'<p style="color: #ffffff; background-color: rgba(30, 58, 138, 0.9); padding: 8px; border-radius: 5px;">Total Detections: {total_detections}</p>',
+                        unsafe_allow_html=True
+                    )
+                    st.markdown(
+                        f'<p style="color: #ffffff; background-color: rgba(30, 58, 138, 0.9); padding: 8px; border-radius: 5px;">Average Confidence Score: {avg_confidence:.2f}</p>',
+                        unsafe_allow_html=True
+                    )
+                    st.markdown(
+                        f'<p style="color: #ffffff; background-color: rgba(30, 58, 138, 0.9); padding: 8px; border-radius: 5px;">Reliable Detections (Confidence ≥ 0.5): {reliable_detections} ({reliable_percentage:.2f}%)</p>',
+                        unsafe_allow_html=True
+                    )
+                    st.markdown(
+                        '<p style="color: #ffffff; background-color: rgba(30, 58, 138, 0.9); padding: 8px; border-radius: 5px;">Note: True Precision, Recall, and mAP cannot be calculated without ground truth annotations.</p>',
+                        unsafe_allow_html=True
+                    )
+
+                    # Tracking Metrics
+                    st.markdown(
+                        '<p style="color: #ffffff; background-color: rgba(30, 58, 138, 0.9); padding: 8px; border-radius: 5px;"><strong>Tracking Performance</strong></p>',
+                        unsafe_allow_html=True
+                    )
+                    id_switches = count_id_switches(log_data)
+                    st.markdown(
+                        f'<p style="color: #ffffff; background-color: rgba(30, 58, 138, 0.9); padding: 8px; border-radius: 5px;">ID Switches: {id_switches}</p>',
+                        unsafe_allow_html=True
+                    )
+                    st.markdown(
+                        '<p style="color: #ffffff; background-color: rgba(30, 58, 138, 0.9); padding: 8px; border-radius: 5px;">MOTA (Multiple Object Tracking Accuracy) cannot be calculated: no ground truth available.</p>',
+                        unsafe_allow_html=True
+                    )
+                st.markdown('</div>', unsafe_allow_html=True)
 
         with st.container():
             st.markdown('<div class="metrics-section">', unsafe_allow_html=True)
