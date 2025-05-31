@@ -4,5 +4,4 @@ torch
 torchvision
 numpy
 Pillow
-yolov5
-sort
+yolov8
