@@ -5,7 +5,7 @@ import os
 import sys
 import pandas as pd
 import time
-import json
+import numpy as np
 
 # Custom CSS directly embedded
 st.markdown(
@@ -44,12 +44,17 @@ st.markdown(
         box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
         border: 1px solid rgba(255, 255, 255, 0.2);
         transition: transform 0.3s ease, box-shadow 0.3s ease;
-        color: #ffffff; /* White text */
+        color: #ffffff !important; /* White text */
     }
 
     .section-card:hover {
         transform: translateY(-5px);
         box-shadow: 0 12px 25px rgba(0, 0, 0, 0.4);
+    }
+
+    /* Ensure all text inside section-card is white */
+    .section-card p, .section-card div, .section-card span, .section-card .stMarkdown, .section-card .stWrite, .section-card .stWarning, .section-card .stError {
+        color: #ffffff !important;
     }
 
     /* Specific style for Metrics section with white background */
@@ -69,7 +74,7 @@ st.markdown(
     }
 
     /* Ensure all text inside metrics-section is black */
-    .metrics-section p, .metrics-section div, .metrics-section span {
+    .metrics-section p, .metrics-section div, .metrics-section span, .metrics-section .stMarkdown, .metrics-section .stWrite, .metrics-section .stWarning, .metrics-section .stError {
         color: #000000 !important;
     }
 
@@ -117,6 +122,16 @@ st.markdown(
 
     /* Warning styling */
     .stWarning {
+        background-color: rgba(254, 242, 242, 0.9);
+        padding: 12px;
+        border-radius: 8px;
+        border-left: 5px solid #dc2626;
+        animation: slideIn 0.8s ease-out;
+        color: #ffffff; /* White text for contrast */
+    }
+
+    /* Error styling */
+    .stError {
         background-color: rgba(254, 242, 242, 0.9);
         padding: 12px;
         border-radius: 8px;
@@ -183,7 +198,7 @@ st.markdown(
         padding: 10px;
         box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
         transition: transform 0.3s ease;
-        color: #ffffff; /* White text */
+        color: #ffffff !important; /* White text */
     }
 
     .stSelectbox div:hover, .stFileUploader:hover {
@@ -197,13 +212,13 @@ st.markdown(
         padding: 10px;
         box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
         animation: fadeIn 1s ease-in;
-        color: #ffffff; /* White text */
+        color: #ffffff !important; /* White text */
     }
 
     /* Dataframe inside metrics section */
     .metrics-section .stDataFrame {
         background-color: rgba(0, 0, 0, 0.05); /* Slight gray tint for contrast */
-        color: #000000; /* Black text */
+        color: #000000 !important; /* Black text */
     }
 
     /* Animations */
@@ -246,7 +261,7 @@ from utils.yolo_video import load_video, load_model, process_frame, save_log, co
 def main():
     # Decorative header
     st.markdown('<div class="stHeader">Object Detection and Tracking</div>', unsafe_allow_html=True)
-
+    
     # User interface with separated sections
     with st.container():
         st.markdown('<div class="section-card">', unsafe_allow_html=True)
@@ -275,32 +290,23 @@ def main():
     if invalid_classes:
         st.error(f"The following objects are not supported: {', '.join(invalid_classes)}. Please choose from the available options.")
         return
-
+    
     selected_class_ids = [k for k, v in load_model("model/yolov8n.pt")[1].items() if v in selected_classes]
-
+    
     if not selected_classes:
         st.warning("Please select at least one class for detection.")
         return
 
-    with st.container():
-        st.markdown('<div class="section-card">', unsafe_allow_html=True)
-        st.markdown('<div class="stSubheader">Upload Ground Truth</div>', unsafe_allow_html=True)
-        ground_truth_file = st.file_uploader("Upload ground truth annotations (JSON)", type=["json"])
-        ground_truth = None
-        if ground_truth_file:
-            ground_truth = json.load(ground_truth_file)
-        st.markdown('</div>', unsafe_allow_html=True)
-
     if video_file:
         tfile = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4")
         tfile.write(video_file.read())
-
+        
         cap = load_video(tfile.name)
         stframe = st.empty()
         status = st.empty()
         status.markdown('<div class="processing-message">Processing video...</div>', unsafe_allow_html=True)
         show_progress("Video processed successfully!")
-
+        
         with st.container():
             st.markdown('<div class="section-card">', unsafe_allow_html=True)
             st.markdown('<div class="stSubheader">Real-Time Detections</div>', unsafe_allow_html=True)
@@ -308,22 +314,19 @@ def main():
             log_data = []
             table_data = []
             objects_detected = False
-            metrics_list = []
-            total_fp = 0
-            total_fn = 0
-            total_gt = 0
             frame_count = 0
             detected_classes = set()
-
+            
             while cap.isOpened():
                 ret, frame = cap.read()
                 if not ret:
                     break
                 frame_count += 1
 
-                frame, frame_log, detected, metrics = process_frame(
+                # Pass an empty list for ground truth since we don't need it
+                frame, frame_log, detected, _ = process_frame(
                     frame, load_model("model/yolov8n.pt")[0], load_model("model/yolov8n.pt")[1], selected_class_ids=selected_class_ids,
-                    ground_truth=ground_truth.get(str(frame_count), []) if ground_truth else [],
+                    ground_truth=[],  # No ground truth needed
                     frame_number=frame_count
                 )
                 log_data.extend(frame_log)
@@ -344,22 +347,10 @@ def main():
                         })
                     table_df = pd.DataFrame(table_data)
                     table_placeholder.dataframe(table_df, use_container_width=True)
-
-                if metrics:
-                    metrics_list.append(metrics)
-                    st.write(f"Metrics for frame {frame_count}: Precision = {metrics.get('precision', 0):.2f}, Recall = {metrics.get('recall', 0):.2f}, mAP = {metrics.get('mAP', 0):.2f}")
-                    if ground_truth and str(frame_count) in ground_truth:
-                        frame_gt = ground_truth[str(frame_count)]
-                        total_gt += len(frame_gt)
-                        frame_fp = len(frame_log) - (metrics.get("precision", 0) * len(frame_log) if len(frame_log) > 0 else 0)
-                        frame_fn = len(frame_gt) - (metrics.get("recall", 0) * len(frame_gt) if len(frame_gt) > 0 else 0)
-                        total_fp += frame_fp
-                        total_fn += frame_fn
-                        st.write(f"Frame {frame_count} - False Positives: {frame_fp}, False Negatives: {frame_fn}, Total GT: {len(frame_gt)}")
-
+                
                 frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                 stframe.image(frame_rgb, use_container_width=True)
-
+            
             # Display detection table with message for undetected classes
             table_df = pd.DataFrame(table_data)
             table_placeholder.dataframe(table_df, use_container_width=True)
@@ -387,35 +378,38 @@ def main():
 
         with st.container():
             st.markdown('<div class="metrics-section">', unsafe_allow_html=True)
-            st.markdown('<div class="stSubheader">Metrics and Logs</div>', unsafe_allow_html=True)
-            if metrics_list:
-                avg_precision = sum(m["precision"] for m in metrics_list) / len(metrics_list)
-                avg_recall = sum(m["recall"] for m in metrics_list) / len(metrics_list)
-                avg_mAP = sum(m["mAP"] for m in metrics_list) / len(metrics_list)
-                st.write(f"Metrics calculated - Precision: {avg_precision:.2f}, Recall: {avg_recall:.2f}, mAP: {avg_mAP:.2f}")
-                st.write(f"Total False Positives: {total_fp}, Total False Negatives: {total_fn}, Total Ground Truth: {total_gt}")
-
-            id_switches = count_id_switches(log_data)
-            st.write(f"ID Switches: {id_switches}")
-
-            if total_gt > 0:
-                mota = 1 - (total_fp + total_fn + id_switches) / total_gt
-                st.markdown(
-    f"<p style='color:white;'>MOTA: {mota:.2f}</p>",
-    unsafe_allow_html=True
-)
-
+            st.markdown('<div class="stSubheader">Evaluation Metrics</div>', unsafe_allow_html=True)
+            if log_data:
+                # Detection Metrics (approximate based on confidence scores)
+                st.write("**Detection Quality (Approximate)**")
+                confidences = [log["confidence"] for log in log_data]
+                total_detections = len(confidences)
+                avg_confidence = np.mean(confidences) if confidences else 0
+                reliable_detections = len([c for c in confidences if c >= 0.5])
+                reliable_percentage = (reliable_detections / total_detections * 100) if total_detections > 0 else 0
+                
+                st.write(f"Total Detections: {total_detections}")
+                st.write(f"Average Confidence Score: {avg_confidence:.2f}")
+                st.write(f"Reliable Detections (Confidence ≥ 0.5): {reliable_detections} ({reliable_percentage:.2f}%)")
+                st.write("Note: True Precision, Recall, and mAP cannot be calculated without ground truth annotations.")
+                
+                # Tracking Metrics
+                st.write("**Tracking Performance**")
+                id_switches = count_id_switches(log_data)
+                st.write(f"ID Switches: {id_switches}")
+                st.write("MOTA (Multiple Object Tracking Accuracy) cannot be calculated: no ground truth available.")
             else:
-                st.markdown(
-                    "<p style='color:white;'>MOTA cannot be calculated: no ground truth available.</p>",
-                    unsafe_allow_html=True
-                )
+                st.write("No detections available to evaluate.")
+            st.markdown('</div>', unsafe_allow_html=True)
 
+        with st.container():
+            st.markdown('<div class="metrics-section">', unsafe_allow_html=True)
+            st.markdown('<div class="stSubheader">Logs</div>', unsafe_allow_html=True)
             if log_data:
                 save_log(log_data, "tracking_log_web.csv")
                 st.download_button("Download Log", data=open("tracking_log_web.csv", "rb"), file_name="tracking_log_web.csv")
             st.markdown('</div>', unsafe_allow_html=True)
-
+        
         cap.release()
         os.remove(tfile.name)
 
