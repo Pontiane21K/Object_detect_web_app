@@ -434,14 +434,7 @@ def main():
                     )
                 st.markdown('</div>', unsafe_allow_html=True)
 
-        with st.container():
-            st.markdown('<div class="metrics-section">', unsafe_allow_html=True)
-            st.markdown('<div class="stSubheader">Logs</div>', unsafe_allow_html=True)
-            if log_data:
-                save_log(log_data, "tracking_log_web.csv")
-                st.download_button("Download Log", data=open("tracking_log_web.csv", "rb"), file_name="tracking_log_web.csv")
-            st.markdown('</div>', unsafe_allow_html=True)
-        
+    
         cap.release()
         os.remove(tfile.name)
 
